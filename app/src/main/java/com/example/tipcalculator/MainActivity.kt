@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -51,20 +52,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Composable parent qui gère l'état global de l'écran (State Hoisting).
- * TipTimeLayout est le propriétaire de l'état amountInput.
- */
 @Composable
 fun TipTimeLayout() {
-    // État mémorisé du montant de la facture hissé depuis EditNumberField
     var amountInput by remember { mutableStateOf("") }
+    var tipInput by remember { mutableStateOf("") }
 
-    // Conversion de la chaîne saisie en Double (0.0 par défaut si vide ou invalide)
     val amount = amountInput.toDoubleOrNull() ?: 0.0
+    val tipPercent = tipInput.toDoubleOrNull() ?: 0.0
 
-    // Calcul dynamique du montant du pourboire
-    val tip = calculateTip(amount)
+    val tip = calculateTip(amount, tipPercent)
 
     Column(
         modifier = Modifier
@@ -81,15 +77,22 @@ fun TipTimeLayout() {
                 .padding(bottom = 16.dp, top = 40.dp)
                 .align(alignment = Alignment.Start)
         )
-        // Champ de saisie sans état (stateless), recevant la valeur et le rappel de modification
         EditNumberField(
+            label = R.string.bill_amount,
             value = amountInput,
-            onValueChange = { amountInput = it },
+            onValueChanged = { amountInput = it },
             modifier = Modifier
                 .padding(bottom = 32.dp)
                 .fillMaxWidth()
         )
-        // Affichage dynamique du pourboire calculé
+        EditNumberField(
+            label = R.string.tip_percentage,
+            value = tipInput,
+            onValueChanged = { tipInput = it },
+            modifier = Modifier
+                .padding(bottom = 32.dp)
+                .fillMaxWidth()
+        )
         Text(
             text = stringResource(R.string.tip_amount, tip),
             style = MaterialTheme.typography.displaySmall
@@ -98,33 +101,23 @@ fun TipTimeLayout() {
     }
 }
 
-/**
- * Composable réutilisable et sans état (Stateless) pour la saisie du montant.
- *
- * @param value La valeur actuelle affichée dans la zone de texte.
- * @param onValueChange Rappel appelé lorsque l'utilisateur modifie le texte.
- * @param modifier Modificateur d'interface utilisateur (paramètre optionnel par convention).
- */
 @Composable
 fun EditNumberField(
+    @StringRes label: Int,
     value: String,
-    onValueChange: (String) -> Unit,
+    onValueChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     TextField(
         value = value,
-        onValueChange = onValueChange,
-        label = { Text(stringResource(R.string.bill_amount)) },
+        onValueChange = onValueChanged,
+        label = { Text(stringResource(label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier
     )
 }
 
-/**
- * Calcule le pourboire en fonction du montant de la facture et du pourcentage.
- * Utilise Locale.US pour forcer l'affichage de la devise en dollars ($).
- */
 private fun calculateTip(amount: Double, tipPercent: Double = 15.0): String {
     val tip = tipPercent / 100 * amount
     return NumberFormat.getCurrencyInstance(Locale.US).format(tip)
