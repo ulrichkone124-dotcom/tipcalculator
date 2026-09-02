@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.tipcalculator.ui.theme.TipCalculatorTheme
 import java.text.NumberFormat
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,8 +51,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Composable parent qui gère l'état global de l'écran (State Hoisting).
+ * TipTimeLayout est le propriétaire de l'état amountInput.
+ */
 @Composable
 fun TipTimeLayout() {
+    // État mémorisé du montant de la facture hissé depuis EditNumberField
+    var amountInput by remember { mutableStateOf("") }
+
+    // Conversion de la chaîne saisie en Double (0.0 par défaut si vide ou invalide)
+    val amount = amountInput.toDoubleOrNull() ?: 0.0
+
+    // Calcul dynamique du montant du pourboire
+    val tip = calculateTip(amount)
+
     Column(
         modifier = Modifier
             .statusBarsPadding()
@@ -67,29 +81,39 @@ fun TipTimeLayout() {
                 .padding(bottom = 16.dp, top = 40.dp)
                 .align(alignment = Alignment.Start)
         )
+        // Champ de saisie sans état (stateless), recevant la valeur et le rappel de modification
         EditNumberField(
+            value = amountInput,
+            onValueChange = { amountInput = it },
             modifier = Modifier
                 .padding(bottom = 32.dp)
                 .fillMaxWidth()
         )
+        // Affichage dynamique du pourboire calculé
         Text(
-            text = stringResource(R.string.tip_amount, "$0.00"),
+            text = stringResource(R.string.tip_amount, tip),
             style = MaterialTheme.typography.displaySmall
         )
         Spacer(modifier = Modifier.height(150.dp))
     }
 }
 
+/**
+ * Composable réutilisable et sans état (Stateless) pour la saisie du montant.
+ *
+ * @param value La valeur actuelle affichée dans la zone de texte.
+ * @param onValueChange Rappel appelé lorsque l'utilisateur modifie le texte.
+ * @param modifier Modificateur d'interface utilisateur (paramètre optionnel par convention).
+ */
 @Composable
-fun EditNumberField(modifier: Modifier = Modifier) {
-    var amountInput by remember { mutableStateOf("") }
-
-    val amount = amountInput.toDoubleOrNull() ?: 0.0
-    val tip = calculateTip(amount)
-
+fun EditNumberField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     TextField(
-        value = amountInput,
-        onValueChange = { amountInput = it },
+        value = value,
+        onValueChange = onValueChange,
         label = { Text(stringResource(R.string.bill_amount)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -97,9 +121,13 @@ fun EditNumberField(modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * Calcule le pourboire en fonction du montant de la facture et du pourcentage.
+ * Utilise Locale.US pour forcer l'affichage de la devise en dollars ($).
+ */
 private fun calculateTip(amount: Double, tipPercent: Double = 15.0): String {
     val tip = tipPercent / 100 * amount
-    return NumberFormat.getCurrencyInstance().format(tip)
+    return NumberFormat.getCurrencyInstance(Locale.US).format(tip)
 }
 
 @Preview(showBackground = true)
